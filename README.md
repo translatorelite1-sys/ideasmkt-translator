@@ -1,0 +1,2 @@
+# ideasmkt-translator
+Live Translator
