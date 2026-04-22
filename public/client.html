@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Ideas MKT · Live Translator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #07080f;
+      --surface:   #0e0f1a;
+      --border:    rgba(255,255,255,0.07);
+      --gold:      #c8a84b;
+      --gold-dim:  rgba(200,168,75,0.15);
+      --gold-glow: rgba(200,168,75,0.35);
+      --text:      #e8e3d5;
+      --muted:     #4a4a5a;
+      --live:      #4cffb0;
+      --live-dim:  rgba(76,255,176,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Grid texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top glow */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -180px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 360px;
+      background: radial-gradient(ellipse, rgba(200,168,75,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.8s;
+    }
+
+    body.connected::after {
+      background: radial-gradient(ellipse, rgba(76,255,176,0.07) 0%, transparent 70%);
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 2rem 1.25rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; padding: 0.5rem 0 0.25rem; }
+    .header-eyebrow {
+      font-size: 0.6rem;
+      letter-spacing: 0.5em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    .header-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 300;
+      color: var(--text);
+      letter-spacing: 0.04em;
+    }
+    .header-title em { color: var(--gold); font-style: italic; }
+
+    /* ── Status pill ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      width: fit-content;
+      margin: 0 auto;
+      transition: all 0.4s;
+    }
+    .status-bar.connected {
+      border-color: rgba(76,255,176,0.3);
+      color: var(--live);
+      background: var(--live-dim);
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: all 0.4s;
+    }
+    .status-bar.connected .status-dot {
+      background: var(--live);
+      box-shadow: 0 0 8px var(--live);
+      animation: pulse-dot 1.6s ease infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Card base ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.4rem 1.5rem;
+    }
+    .card-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.35em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.9rem;
+    }
+
+    /* ── Setup card ── */
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem;
+      align-items: end;
+    }
+    label {
+      display: block;
+      font-size: 0.62rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.45rem;
+    }
+    select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 0.7rem 0.9rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.9rem center;
+    }
+    select option { background: #1a1a2e; }
+
+    .btn-connect {
+      padding: 0.7rem 1.4rem;
+      border-radius: 10px;
+      border: 1px solid var(--gold);
+      background: var(--gold-dim);
+      color: var(--gold);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.25s;
+    }
+    .btn-connect:hover { background: rgba(200,168,75,0.25); }
+    .btn-connect.active {
+      background: rgba(255,80,80,0.1);
+      border-color: rgba(255,80,80,0.5);
+      color: #ff7070;
+    }
+
+    /* ── Subtitle panel ── */
+    .subtitle-panel {
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .subtitle-partial {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.1rem, 3vw, 1.35rem);
+      font-weight: 300;
+      font-style: italic;
+      color: var(--muted);
+      line-height: 1.6;
+      min-height: 2rem;
+      transition: color 0.3s;
+    }
+    .subtitle-final {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 3rem;
+      transition: all 0.4s;
+    }
+    .subtitle-final.flash {
+      color: #fff;
+    }
+
+    /* ── Original text ── */
+    .original-text {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-style: italic;
+      line-height: 1.6;
+      min-height: 1.4rem;
+    }
+
+    /* ── Audio player ── */
+    .audio-section { display: flex; flex-direction: column; gap: 0.75rem; }
+    .audio-wave {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 32px;
+    }
+    .wave-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: rgba(200,168,75,0.15);
+      transition: height 0.1s ease, background 0.2s;
+    }
+    .audio-wave.playing .wave-bar {
+      background: var(--gold);
+      animation: wave-anim 0.8s ease-in-out infinite;
+    }
+    .wave-bar:nth-child(1)  { animation-delay: 0.0s; height: 8px; }
+    .wave-bar:nth-child(2)  { animation-delay: 0.1s; height: 16px; }
+    .wave-bar:nth-child(3)  { animation-delay: 0.2s; height: 24px; }
+    .wave-bar:nth-child(4)  { animation-delay: 0.15s; height: 20px; }
+    .wave-bar:nth-child(5)  { animation-delay: 0.05s; height: 12px; }
+    .wave-bar:nth-child(6)  { animation-delay: 0.25s; height: 28px; }
+    .wave-bar:nth-child(7)  { animation-delay: 0.1s;  height: 18px; }
+    .wave-bar:nth-child(8)  { animation-delay: 0.2s;  height: 10px; }
+    .wave-bar:nth-child(9)  { animation-delay: 0.05s; height: 22px; }
+    .wave-bar:nth-child(10) { animation-delay: 0.15s; height: 14px; }
+    .wave-bar:nth-child(11) { animation-delay: 0.3s;  height: 8px; }
+    .wave-bar:nth-child(12) { animation-delay: 0.0s;  height: 20px; }
+    @keyframes wave-anim {
+      0%,100% { transform: scaleY(0.4); }
+      50%      { transform: scaleY(1.2); }
+    }
+
+    .audio-info {
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+    }
+    audio { display: none; }
+
+    /* ── History log ── */
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .log-item {
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      border-left: 2px solid transparent;
+      transition: border-color 0.3s;
+    }
+    .log-item.new { border-left-color: var(--gold); }
+    .log-original { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; }
+    .log-translated { font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: var(--text); }
+    .log-time { font-size: 0.58rem; color: #333; margin-top: 0.25rem; }
+    .log-empty { font-size: 0.75rem; color: #2a2a3a; font-style: italic; text-align: center; padding: 1rem 0; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      color: #1e1e2e;
+      text-transform: uppercase;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-eyebrow">Ideas MKT · Conferencia en vivo</div>
+      <h1 class="header-title">Live <em>Translator</em></h1>
+    </div>
+
+    <!-- Status -->
+    <div class="status-bar" id="statusBar">
+      <span class="status-dot"></span>
+      <span id="statusText">Sin conexión</span>
+    </div>
+
+    <!-- Setup -->
+    <div class="card">
+      <div class="card-label">Configuración</div>
+      <div class="setup-grid">
+        <div>
+          <label for="langSelect">Tu idioma</label>
+          <select id="langSelect">
+            <option value="es">🇪🇸 Español</option>
+            <option value="en">🇺🇸 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="pt">🇧🇷 Português</option>
+          </select>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn-connect" id="connectBtn" onclick="toggleConnection()">Conectar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subtitles -->
+    <div class="card">
+      <div class="card-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Subtítulos en vivo</span>
+        <span id="liveIndicator" style="display:none;font-size:0.58rem;color:var(--live);letter-spacing:0.2em;">● EN VIVO</span>
+      </div>
+      <div class="subtitle-panel">
+        <div class="subtitle-partial" id="partialText">Esperando audio...</div>
+        <div class="subtitle-final" id="finalText"></div>
+      </div>
+    </div>
+
+    <!-- Original -->
+    <div class="card">
+      <div class="card-label">Texto original</div>
+      <div class="original-text" id="originalText">El texto original del orador aparecerá aquí.</div>
+    </div>
+
+    <!-- Audio -->
+    <div class="card">
+      <div class="card-label">Audio traducido</div>
+      <div class="audio-section">
+        <div class="audio-wave" id="audioWave">
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+        </div>
+        <div class="audio-info" id="audioInfo">Sin audio activo</div>
+        <audio id="audioPlayer"></audio>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-label" style="display:flex;justify-content:space-between;">
+        <span>Historial</span>
+        <span style="cursor:pointer;color:var(--muted);font-size:0.62rem;" onclick="clearLog()">Limpiar</span>
+      </div>
+      <div class="log-list" id="logList">
+        <div class="log-empty">Las traducciones aparecerán aquí</div>
+      </div>
+    </div>
+
+    <div class="footer">Ideas MKT Live Translator · Powered by Azure + Claude AI</div>
+  </div>
+
+  <script>
+    let ws = null;
+    let isConnected = false;
+    let logItems = [];
+
+    const statusBar    = document.getElementById('statusBar');
+    const statusText   = document.getElementById('statusText');
+    const connectBtn   = document.getElementById('connectBtn');
+    const partialText  = document.getElementById('partialText');
+    const finalText    = document.getElementById('finalText');
+    const originalText = document.getElementById('originalText');
+    const audioPlayer  = document.getElementById('audioPlayer');
+    const audioWave    = document.getElementById('audioWave');
+    const audioInfo    = document.getElementById('audioInfo');
+    const logList      = document.getElementById('logList');
+    const liveIndicator = document.getElementById('liveIndicator');
+
+    function toggleConnection() {
+      isConnected ? disconnect() : connect();
+    }
+
+    function connect() {
+      const lang = document.getElementById('langSelect').value;
+      const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      const host = location.host || 'localhost:4000';
+
+      try {
+        ws = new WebSocket(`${protocol}://${host}`);
+
+        ws.onopen = () => {
+          isConnected = true;
+          ws.send(JSON.stringify({ type: 'register', language: lang }));
+          setStatus('connected', '● Conectado');
+          connectBtn.textContent = 'Desconectar';
+          connectBtn.classList.add('active');
+          document.body.classList.add('connected');
+          liveIndicator.style.display = 'inline';
+          partialText.textContent = 'Listo — esperando al orador...';
+        };
+
+        ws.onmessage = (evt) => {
+          const data = JSON.parse(evt.data);
+          handleMessage(data);
+        };
+
+        ws.onclose = () => {
+          isConnected = false;
+          setStatus('disconnected', 'Desconectado');
+          connectBtn.textContent = 'Conectar';
+          connectBtn.classList.remove('active');
+          document.body.classList.remove('connected');
+          liveIndicator.style.display = 'none';
+        };
+
+        ws.onerror = () => {
+          setStatus('disconnected', 'Error de conexión');
+        };
+
+      } catch(e) {
+        setStatus('disconnected', 'No se pudo conectar');
+      }
+    }
+
+    function disconnect() {
+      ws && ws.close();
+    }
+
+    function handleMessage(data) {
+      // Texto parcial (mientras habla)
+      if (data.type === 'partial') {
+        partialText.textContent = data.text;
+      }
+
+      // Texto original final reconocido
+      if (data.type === 'original') {
+        originalText.textContent = data.text;
+        partialText.textContent = '';
+      }
+
+      // Traducciones de texto
+      if (data.type === 'translations') {
+        const myLang = document.getElementById('langSelect').value;
+        const t = data.translations.find(x => x.lang.startsWith(myLang));
+        if (t) {
+          finalText.textContent = t.text;
+          finalText.classList.add('flash');
+          setTimeout(() => finalText.classList.remove('flash'), 600);
+
+          // Agregar al historial
+          addToLog(originalText.textContent, t.text);
+        }
+      }
+
+      // Audio traducido
+      if (data.type === 'audio') {
+        const myLang = document.getElementById('langSelect').value;
+        if (data.lang.startsWith(myLang)) {
+          playAudio(data.audio, data.lang);
+        }
+      }
+    }
+
+    function playAudio(base64Audio, lang) {
+      const src = 'data:audio/wav;base64,' + base64Audio;
+      audioPlayer.src = src;
+      audioWave.classList.add('playing');
+      audioInfo.textContent = `▶ Reproduciendo — ${lang.toUpperCase()}`;
+      audioPlayer.play().catch(() => {});
+      audioPlayer.onended = () => {
+        audioWave.classList.remove('playing');
+        audioInfo.textContent = 'Listo para siguiente fragmento';
+      };
+    }
+
+    function addToLog(original, translated) {
+      if (!original || !translated) return;
+      const ts = new Date().toLocaleTimeString();
+      logItems.unshift({ original, translated, ts });
+      renderLog();
+    }
+
+    function renderLog() {
+      if (logItems.length === 0) {
+        logList.innerHTML = '<div class="log-empty">Las traducciones aparecerán aquí</div>';
+        return;
+      }
+      logList.innerHTML = logItems.slice(0, 30).map((item, i) => `
+        <div class="log-item ${i === 0 ? 'new' : ''}">
+          <div class="log-original">${escapeHtml(item.original)}</div>
+          <div class="log-translated">${escapeHtml(item.translated)}</div>
+          <div class="log-time">${item.ts}</div>
+        </div>
+      `).join('');
+      setTimeout(() => {
+        const first = logList.querySelector('.log-item.new');
+        if (first) first.classList.remove('new');
+      }, 2000);
+    }
+
+    function clearLog() {
+      logItems = [];
+      renderLog();
+    }
+
+    function setStatus(type, text) {
+      statusText.textContent = text;
+      statusBar.className = 'status-bar' + (type === 'connected' ? ' connected' : '');
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>
+
