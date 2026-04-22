@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ideas MKT · Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #07080f;
+      --surface: #0d0e1b;
+      --surface2:#131428;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #c8a84b;
+      --gold-d:  rgba(200,168,75,0.12);
+      --gold-g:  rgba(200,168,75,0.35);
+      --text:    #e8e3d5;
+      --muted:   #4a4a5e;
+      --live:    #4cffb0;
+      --danger:  #ff6b6b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .app { position: relative; z-index: 1; display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+      display: flex; flex-direction: column; gap: 2rem;
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    }
+    .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 300; }
+    .logo em { color: var(--gold); font-style: italic; }
+    .logo-sub { font-size: 0.58rem; letter-spacing: 0.35em; color: var(--muted); text-transform: uppercase; margin-top: 0.3rem; }
+
+    .nav { display: flex; flex-direction: column; gap: 0.25rem; }
+    .nav-item {
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 0.7rem;
+      border: 1px solid transparent;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .nav-item.active { color: var(--gold); background: var(--gold-d); border-color: rgba(200,168,75,0.2); }
+    .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .sidebar-status {
+      margin-top: auto;
+      padding: 0.9rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .sidebar-status .dot {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--muted);
+      margin-right: 0.4rem; vertical-align: middle;
+    }
+    .sidebar-status.live .dot { background: var(--live); box-shadow: 0 0 6px var(--live); }
+    .sidebar-status.live { color: var(--live); }
+
+    /* ── Main ── */
+    .main { padding: 2rem 2.5rem; display: flex; flex-direction: column; gap: 2rem; }
+
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .page-title { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 300; }
+    .page-sub { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-top: 0.3rem; }
+
+    /* ── Stats row ── */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.2rem 1.4rem;
+    }
+    .stat-label { font-size: 0.6rem; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.6rem; }
+    .stat-value { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 300; color: var(--text); }
+    .stat-value.gold { color: var(--gold); }
+    .stat-value.live { color: var(--live); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem;
+    }
+    .card-title { font-size: 0.65rem; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label { font-size: 0.62rem; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.4rem; display: block; }
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.65rem 0.9rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus { outline: none; border-color: rgba(200,168,75,0.4); }
+    select { appearance: none; cursor: pointer; }
+    select option { background: #1a1a2e; }
+
+    /* Language checkboxes */
+    .lang-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    .lang-check {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px; cursor: pointer;
+      font-size: 0.78rem; color: var(--muted);
+      transition: all 0.2s;
+    }
+    .lang-check input { display: none; }
+    .lang-check.checked { background: var(--gold-d); border-color: rgba(200,168,75,0.3); color: var(--gold); }
+    .lang-check-box {
+      width: 14px; height: 14px; border: 1px solid currentColor;
+      border-radius: 3px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.7rem 1.4rem; border-radius: 8px; font-family: 'DM Mono', monospace;
+      font-size: 0.8rem; letter-spacing: 0.08em; cursor: pointer; border: 1px solid;
+      transition: all 0.2s;
+    }
+    .btn-gold { background: var(--gold-d); border-color: var(--gold); color: var(--gold); }
+    .btn-gold:hover { background: rgba(200,168,75,0.22); }
+    .btn-danger { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.4); color: var(--danger); }
+    .btn-success { background: rgba(76,255,176,0.1); border-color: rgba(76,255,176,0.4); color: var(--live); }
+    .btn-ghost { background: transparent; border-color: var(--border); color: var(--muted); }
+    .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+    .btn-row { display: flex; gap: 0.75rem; margin-top: 1.2rem; flex-wrap: wrap; }
+
+    /* ── QR section ── */
+    .qr-area {
+      display: flex; align-items: center; gap: 2rem;
+      padding: 1.5rem; background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border); border-radius: 12px;
+    }
+    .qr-box {
+      width: 100px; height: 100px; min-width: 100px;
+      background: white; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; color: #333; text-align: center; padding: 8px;
+    }
+    .qr-info { flex: 1; }
+    .qr-url { font-size: 0.8rem; color: var(--gold); margin-bottom: 0.4rem; word-break: break-all; }
+    .qr-desc { font-size: 0.65rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Clients table ── */
+    .clients-table { width: 100%; border-collapse: collapse; }
+    .clients-table th {
+      font-size: 0.58rem; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase;
+      padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    .clients-table td { padding: 0.7rem 0.75rem; font-size: 0.78rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .clients-table tr:last-child td { border-bottom: none; }
+    .lang-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0.5rem; border-radius: 4px;
+      background: var(--gold-d); border: 1px solid rgba(200,168,75,0.2);
+      font-size: 0.65rem; color: var(--gold);
+    }
+    .online-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--live); box-shadow: 0 0 5px var(--live); }
+
+    /* ── Transcript ── */
+    .transcript-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 320px; overflow-y: auto; }
+    .transcript-item {
+      padding: 0.75rem 1rem; background: rgba(255,255,255,0.02);
+      border-radius: 8px; border-left: 2px solid transparent;
+    }
+    .transcript-item.new { border-left-color: var(--gold); }
+    .transcript-orig { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.3rem; }
+    .transcript-trans { font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: var(--text); }
+    .transcript-ts { font-size: 0.58rem; color: #2a2a3a; margin-top: 0.25rem; }
+    .transcript-empty { font-size: 0.72rem; color: #2a2a3a; font-style: italic; text-align: center; padding: 1.5rem; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; padding: 1rem; gap: 1rem; }
+      .nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-status { margin-top: 0; }
+      .main { padding: 1.25rem; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div>
+      <div class="logo">Ideas MKT<br><em>Translator</em></div>
+      <div class="logo-sub">Panel de control</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showTab('dashboard')"><span class="nav-icon">◈</span> Dashboard</div>
+      <div class="nav-item" onclick="showTab('evento')"><span class="nav-icon">✦</span> Evento</div>
+      <div class="nav-item" onclick="showTab('asistentes')"><span class="nav-icon">◉</span> Asistentes</div>
+      <div class="nav-item" onclick="showTab('transcripcion')"><span class="nav-icon">≡</span> Transcripción</div>
+      <div class="nav-item" onclick="showTab('config')"><span class="nav-icon">⚙</span> Configuración</div>
+    </nav>
+    <div class="sidebar-status" id="sidebarStatus">
+      <span class="dot"></span> Backend desconectado
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="tab-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Estado del sistema en tiempo real</div>
+        </div>
+        <button class="btn btn-success" onclick="connectBackend()">Conectar backend</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Asistentes</div>
+          <div class="stat-value live" id="statClients">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Traducciones</div>
+          <div class="stat-value gold" id="statTranslations">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Idiomas activos</div>
+          <div class="stat-value" id="statLangs">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Duración</div>
+          <div class="stat-value" id="statDuration">00:00</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Acceso para asistentes</div>
+          <div class="qr-area">
+            <div class="qr-box" id="qrBox">
+              Genera el QR<br>desde Evento
+            </div>
+            <div class="qr-info">
+              <div class="qr-url" id="qrUrl">—</div>
+              <div class="qr-desc">Los asistentes escanean este QR para acceder a los subtítulos y audio en su idioma.</div>
+              <div class="btn-row">
+                <button class="btn btn-gold" onclick="copyUrl()">Copiar URL</button>
+                <button class="btn btn-ghost" onclick="generateQR()">Generar QR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Última traducción</div>
+          <div id="lastTranslation" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--muted);font-style:italic;min-height:80px;line-height:1.6;">
+            Sin traducciones aún...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EVENTO ── -->
+    <div id="tab-evento" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Configurar Evento</div>
+          <div class="page-sub">Nombre, idiomas y ajustes</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Información del evento</div>
+          <div class="form-group">
+            <label class="form-label">Nombre del evento</label>
+            <input type="text" id="eventName" placeholder="Ej: Congreso Marketing 2025" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Idioma del orador</label>
+            <select id="speakerLang">
+              <option value="es-MX">🇪🇸 Español (México)</option>
+              <option value="es-ES">🇪🇸 Español (España)</option>
+              <option value="en-US">🇺🇸 English (US)</option>
+              <option value="en-GB">🇬🇧 English (UK)</option>
+              <option value="fr-FR">🇫🇷 Français</option>
+              <option value="pt-BR">🇧🇷 Português</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modo de traducción</label>
+            <select id="translationMode">
+              <option value="conference">Conferencia (formal)</option>
+              <option value="casual">Conversacional</option>
+              <option value="technical">Técnico / especializado</option>
+            </select>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-gold" onclick="saveEvent()">Guardar evento</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Idiomas de traducción</div>
+          <div class="lang-grid" id="langGrid">
+            <label class="lang-check checked" data-lang="es" onclick="toggleLang(this)">
+              <span class="lang-check-box">✓</span> 🇪🇸 Español
+            </label>
+            <label class="lang-check checked" data-lang="en" onclick="toggleLang(this)">
+              <span class="lang-check-box">✓</span> 🇺🇸 English
+            </label>
+            <label class="lang-check" data-lang="fr" onclick="toggleLang(this)">
+              <span class="lang-check-box"></span> 🇫🇷 Français
+            </label>
+            <label class="lang-check" data-lang="pt" onclick="toggleLang(this)">
+              <span class="lang-check-box"></span> 🇧🇷 Português
+            </label>
+            <label class="lang-check" data-lang="de" onclick="toggleLang(this)">
+              <span class="lang-check-box"></span> 🇩🇪 Deutsch
+            </label>
+            <label class="lang-check" data-lang="it" onclick="toggleLang(this)">
+              <span class="lang-check-box"></span> 🇮🇹 Italiano
+            </label>
+            <label class="lang-check" data-lang="zh" onclick="toggleLang(this)">
+              <span class="lang-check-box"></span> 🇨🇳 中文
+            </label>
+            <label class="lang-check" data-lang="ja" onclick="toggleLang(this)">
+              <span class="lang-check-box"></span> 🇯🇵 日本語
+            </label>
+          </div>
+          <div style="margin-top:1rem;">
+            <button class="btn btn-gold" onclick="applyLangs()">Aplicar idiomas</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ASISTENTES ── -->
+    <div id="tab-asistentes" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Asistentes</div>
+          <div class="page-sub">Conexiones activas en tiempo real</div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);">
+          Total: <span id="totalClients" style="color:var(--live);">0</span> conectados
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="clients-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Estado</th>
+              <th>Idioma</th>
+              <th>Conectado hace</th>
+              <th>Mensajes</th>
+            </tr>
+          </thead>
+          <tbody id="clientsTable">
+            <tr>
+              <td colspan="5" style="text-align:center;color:var(--muted);font-size:0.75rem;padding:1.5rem;">
+                Sin asistentes conectados
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TRANSCRIPCIÓN ── -->
+    <div id="tab-transcripcion" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Transcripción</div>
+          <div class="page-sub">Registro completo del evento</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn btn-gold" onclick="downloadTranscript()">⬇ Descargar TXT</button>
+          <button class="btn btn-ghost" onclick="clearTranscript()">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Registro en tiempo real</div>
+        <div class="transcript-list" id="transcriptList">
+          <div class="transcript-empty">La transcripción aparecerá aquí durante el evento</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONFIG ── -->
+    <div id="tab-config" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Configuración</div>
+          <div class="page-sub">Claves de API y ajustes del servidor</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Azure Speech Services</div>
+          <div class="form-group">
+            <label class="form-label">Azure STT Key</label>
+            <input type="password" id="azureKey" placeholder="••••••••••••••••" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Azure Region</label>
+            <input type="text" id="azureRegion" placeholder="eastus" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Azure Translator Key</label>
+            <input type="password" id="azureTransKey" placeholder="••••••••••••••••" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-gold" onclick="saveConfig()">Guardar configuración</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Servidor WebSocket</div>
+          <div class="form-group">
+            <label class="form-label">URL del backend</label>
+            <input type="text" id="wsUrl" placeholder="ws://localhost:4000" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Puerto HTTP</label>
+            <input type="text" id="httpPort" placeholder="4000" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Calidad de audio</label>
+            <select id="audioQuality">
+              <option value="high">Alta (mejor calidad)</option>
+              <option value="medium" selected>Media (recomendada)</option>
+              <option value="low">Baja (bajo ancho de banda)</option>
+            </select>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-success" onclick="testConnection()">Probar conexión</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ── State ──
+  let ws = null;
+  let clients = [];
+  let transcriptItems = [];
+  let translationCount = 0;
+  let startTime = null;
+  let durationTimer = null;
+  let activeLangs = ['es', 'en'];
+  let currentTab = 'dashboard';
+
+  // ── Navigation ──
+  function showTab(tab) {
+    document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+    document.getElementById('tab-' + tab).style.display = '';
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    currentTab = tab;
+  }
+
+  // ── Backend connection ──
+  function connectBackend() {
+    const url = document.getElementById('wsUrl')?.value || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+    try {
+      ws = new WebSocket(url);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'admin', role: 'admin' }));
+        setBackendStatus(true);
+        startTime = Date.now();
+        durationTimer = setInterval(updateDuration, 1000);
+      };
+      ws.onmessage = (evt) => {
+        try { handleAdminMessage(JSON.parse(evt.data)); } catch(e) {}
+      };
+      ws.onclose = () => {
+        setBackendStatus(false);
+        clearInterval(durationTimer);
+      };
+    } catch(e) {
+      alert('No se pudo conectar al backend: ' + e.message);
+    }
+  }
+
+  function handleAdminMessage(data) {
+    if (data.type === 'clients_update') {
+      clients = data.clients || [];
+      updateClientsUI();
+    }
+    if (data.type === 'original') {
+      // do nothing, wait for translations
+    }
+    if (data.type === 'translations') {
+      translationCount++;
+      document.getElementById('statTranslations').textContent = translationCount;
+      const first = data.translations?.[0];
+      if (first) {
+        document.getElementById('lastTranslation').textContent = first.text;
+        addTranscriptItem(data.original || '', data.translations);
+      }
+    }
+  }
+
+  function setBackendStatus(connected) {
+    const el = document.getElementById('sidebarStatus');
+    if (connected) {
+      el.className = 'sidebar-status live';
+      el.innerHTML = '<span class="dot"></span> Backend conectado';
+    } else {
+      el.className = 'sidebar-status';
+      el.innerHTML = '<span class="dot"></span> Backend desconectado';
+    }
+  }
+
+  function updateDuration() {
+    if (!startTime) return;
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(s / 60);
+    const ss = String(s % 60).padStart(2, '0');
+    document.getElementById('statDuration').textContent = `${m}:${ss}`;
+  }
+
+  // ── Clients ──
+  function updateClientsUI() {
+    const count = clients.length;
+    document.getElementById('statClients').textContent = count;
+    document.getElementById('totalClients').textContent = count;
+    const langs = [...new Set(clients.map(c => c.language))];
+    document.getElementById('statLangs').textContent = langs.length || '—';
+
+    const tbody = document.getElementById('clientsTable');
+    if (count === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);font-size:0.75rem;padding:1.5rem;">Sin asistentes conectados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = clients.map((c, i) => `
+      <tr>
+        <td style="color:var(--muted);">#${String(i+1).padStart(3,'0')}</td>
+        <td><span class="online-dot"></span></td>
+        <td><span class="lang-badge">${c.language || '?'}</span></td>
+        <td style="color:var(--muted);">${c.connectedAt || '—'}</td>
+        <td style="color:var(--muted);">${c.messages || 0}</td>
+      </tr>
+    `).join('');
+  }
+
+  // ── Transcript ──
+  function addTranscriptItem(original, translations) {
+    const ts = new Date().toLocaleTimeString();
+    transcriptItems.unshift({ original, translations, ts });
+    renderTranscript();
+  }
+
+  function renderTranscript() {
+    const el = document.getElementById('transcriptList');
+    if (transcriptItems.length === 0) {
+      el.innerHTML = '<div class="transcript-empty">La transcripción aparecerá aquí durante el evento</div>';
+      return;
+    }
+    el.innerHTML = transcriptItems.slice(0, 50).map((item, i) => `
+      <div class="transcript-item ${i===0?'new':''}">
+        <div class="transcript-orig">${esc(item.original)}</div>
+        ${(item.translations||[]).map(t=>`<div class="transcript-trans">[${t.lang}] ${esc(t.text)}</div>`).join('')}
+        <div class="transcript-ts">${item.ts}</div>
+      </div>
+    `).join('');
+  }
+
+  function clearTranscript() {
+    if (confirm('¿Limpiar toda la transcripción?')) {
+      transcriptItems = [];
+      renderTranscript();
+    }
+  }
+
+  function downloadTranscript() {
+    if (transcriptItems.length === 0) { alert('No hay transcripción para descargar.'); return; }
+    const eventName = document.getElementById('eventName')?.value || 'evento';
+    let txt = `TRANSCRIPCIÓN — ${eventName}\n${new Date().toLocaleString()}\n${'─'.repeat(60)}\n\n`;
+    [...transcriptItems].reverse().forEach(item => {
+      txt += `[${item.ts}] ORIGINAL: ${item.original}\n`;
+      (item.translations||[]).forEach(t => { txt += `  [${t.lang.toUpperCase()}] ${t.text}\n`; });
+      txt += '\n';
+    });
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `transcripcion-${eventName.replace(/\s+/g,'-')}.txt`;
+    a.click();
+  }
+
+  // ── Event config ──
+  function saveEvent() {
+    const name = document.getElementById('eventName').value;
+    if (!name) { alert('Ingresa un nombre para el evento.'); return; }
+    const url = `${location.protocol}//${location.host}/client.html`;
+    document.getElementById('qrUrl').textContent = url;
+    generateQR();
+    alert(`Evento "${name}" guardado. ✓`);
+  }
+
+  function toggleLang(el) {
+    el.classList.toggle('checked');
+    const box = el.querySelector('.lang-check-box');
+    box.textContent = el.classList.contains('checked') ? '✓' : '';
+  }
+
+  function applyLangs() {
+    activeLangs = [...document.querySelectorAll('.lang-check.checked')].map(el => el.dataset.lang);
+    if (activeLangs.length === 0) { alert('Selecciona al menos un idioma.'); return; }
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'set_languages', languages: activeLangs }));
+    }
+    alert(`Idiomas aplicados: ${activeLangs.join(', ')}`);
+  }
+
+  // ── QR ──
+  function generateQR() {
+    const url = document.getElementById('qrUrl').textContent;
+    if (url === '—') { alert('Primero guarda el evento para obtener la URL.'); return; }
+    const qrBox = document.getElementById('qrBox');
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(url)}`;
+    qrBox.innerHTML = `<img src="${qrUrl}" width="84" height="84" alt="QR" style="border-radius:4px;" />`;
+  }
+
+  function copyUrl() {
+    const url = document.getElementById('qrUrl').textContent;
+    if (url === '—') { alert('Primero guarda el evento.'); return; }
+    navigator.clipboard.writeText(url).then(() => alert('URL copiada al portapapeles ✓'));
+  }
+
+  // ── Config ──
+  function saveConfig() {
+    alert('Configuración guardada en memoria.\nPara persistir, agrégala a tu archivo .env del backend.');
+  }
+
+  function testConnection() {
+    const url = document.getElementById('wsUrl').value || 'ws://localhost:4000';
+    try {
+      const testWs = new WebSocket(url);
+      testWs.onopen = () => { alert('✓ Conexión exitosa a ' + url); testWs.close(); };
+      testWs.onerror = () => alert('✗ No se pudo conectar a ' + url);
+    } catch(e) { alert('URL inválida: ' + e.message); }
+  }
+
+  // ── Helpers ──
+  function esc(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Init URL
+  document.addEventListener('DOMContentLoaded', () => {
+    const url = `${location.protocol}//${location.host}/client.html`;
+    document.getElementById('qrUrl').textContent = url;
+    const wsInput = document.getElementById('wsUrl');
+    if (wsInput) wsInput.value = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+  });
+</script>
+</body>
+</html>
+
