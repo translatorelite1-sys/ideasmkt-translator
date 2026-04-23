@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ideas MKT · Guía del Traductor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07080f;
+      --surface: #0d0e1b;
+      --border: rgba(255,255,255,0.07);
+      --gold: #c8a84b;
+      --gold-dim: rgba(200,168,75,0.12);
+      --text: #e8e3d5;
+      --muted: #4a4a5a;
+      --live: #4cffb0;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0;
+    }
+
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 640px; margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      display: flex; flex-direction: column; gap: 2rem;
+    }
+
+    /* Hero */
+    .hero { text-align: center; padding: 1rem 0; }
+    .hero-badge {
+      display: inline-block;
+      font-size: 0.58rem; letter-spacing: 0.4em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 1rem;
+      padding: 0.3rem 1rem; border: 1px solid var(--border);
+      border-radius: 100px; background: var(--surface);
+    }
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.2rem, 7vw, 3.5rem);
+      font-weight: 300; line-height: 1.1;
+      color: var(--text); margin-bottom: 1rem;
+    }
+    .hero-title em { color: var(--gold); font-style: italic; }
+    .hero-sub {
+      font-size: 0.8rem; color: var(--muted);
+      line-height: 1.7; max-width: 420px; margin: 0 auto;
+    }
+
+    /* CTA Button */
+    .cta-btn {
+      display: block; width: 100%;
+      padding: 1rem; border-radius: 12px;
+      background: linear-gradient(135deg, #c8a84b, #a07828);
+      border: none; color: #06060e;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem; font-weight: 500;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      text-decoration: none; text-align: center;
+      cursor: pointer; transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(200,168,75,0.3);
+    }
+    .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,168,75,0.4); }
+
+    /* Steps */
+    .steps-title {
+      font-size: 0.6rem; letter-spacing: 0.4em;
+      color: var(--muted); text-transform: uppercase;
+      text-align: center; margin-bottom: 0.5rem;
+    }
+    .steps { display: flex; flex-direction: column; gap: 0.75rem; }
+    .step {
+      display: flex; gap: 1rem; align-items: flex-start;
+      padding: 1rem 1.2rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; transition: border-color 0.2s;
+    }
+    .step:hover { border-color: rgba(200,168,75,0.2); }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: var(--gold-dim); border: 1px solid rgba(200,168,75,0.3);
+      color: var(--gold); font-size: 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-body { flex: 1; }
+    .step-title { font-size: 0.82rem; color: var(--text); margin-bottom: 0.3rem; }
+    .step-desc { font-size: 0.68rem; color: var(--muted); line-height: 1.6; }
+    .step-icon { font-size: 1.3rem; }
+
+    /* Langs */
+    .langs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .lang-pill {
+      padding: 0.5rem 0.4rem; border-radius: 8px; text-align: center;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      font-size: 0.7rem; color: var(--muted);
+    }
+    .lang-pill .flag { display: block; font-size: 1.2rem; margin-bottom: 0.2rem; }
+
+    /* FAQ */
+    .faq { display: flex; flex-direction: column; gap: 0.5rem; }
+    .faq-item {
+      padding: 0.9rem 1.1rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .faq-q { font-size: 0.75rem; color: var(--text); margin-bottom: 0.4rem; }
+    .faq-a { font-size: 0.68rem; color: var(--muted); line-height: 1.6; }
+
+    /* Card base */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.3rem 1.5rem; }
+    .card-title { font-size: 0.6rem; letter-spacing: 0.35em; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
+
+    /* URL box */
+    .url-box {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.8rem 1rem; border-radius: 10px;
+      background: rgba(200,168,75,0.06); border: 1px solid rgba(200,168,75,0.2);
+    }
+    .url-text { font-size: 0.72rem; color: var(--gold); flex: 1; word-break: break-all; }
+    .copy-btn {
+      padding: 0.4rem 0.8rem; border-radius: 6px;
+      background: var(--gold-dim); border: 1px solid rgba(200,168,75,0.3);
+      color: var(--gold); font-family: 'DM Mono', monospace;
+      font-size: 0.65rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .copy-btn:hover { background: rgba(200,168,75,0.22); }
+
+    /* Footer */
+    .footer { text-align: center; font-size: 0.58rem; color: #1e1e2e; letter-spacing: 0.25em; text-transform: uppercase; }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">Ideas MKT · Tecnología de conferencias</div>
+    <h1 class="hero-title">Live <em>Translator</em></h1>
+    <p class="hero-sub">Subtítulos en tiempo real en tu idioma durante cualquier conferencia, reunión o videollamada.</p>
+  </div>
+
+  <!-- CTA -->
+  <a class="cta-btn" href="https://ideasmkt-translator-production.up.railway.app/client.html" target="_blank">
+    ▶ Abrir Traductor Ahora
+  </a>
+
+  <!-- Steps -->
+  <div>
+    <div class="steps-title">Cómo usarlo — 3 pasos</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Abre el traductor</div>
+          <div class="step-desc">Toca el botón de arriba o abre el link en Chrome. Funciona en teléfono, tablet o computadora.</div>
+        </div>
+        <div class="step-icon">📱</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Selecciona tu idioma y conecta</div>
+          <div class="step-desc">Elige el idioma en que quieres recibir los subtítulos y toca "Conectar".</div>
+        </div>
+        <div class="step-icon">🌐</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Lee los subtítulos en vivo</div>
+          <div class="step-desc">Mientras el orador habla, los subtítulos traducidos aparecen automáticamente en tu pantalla.</div>
+        </div>
+        <div class="step-icon">✦</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Languages -->
+  <div class="card">
+    <div class="card-title">Idiomas disponibles</div>
+    <div class="langs-grid">
+      <div class="lang-pill"><span class="flag">🇪🇸</span>Español</div>
+      <div class="lang-pill"><span class="flag">🇺🇸</span>English</div>
+      <div class="lang-pill"><span class="flag">🇫🇷</span>Français</div>
+      <div class="lang-pill"><span class="flag">🇧🇷</span>Português</div>
+      <div class="lang-pill"><span class="flag">🇩🇪</span>Deutsch</div>
+      <div class="lang-pill"><span class="flag">🇮🇹</span>Italiano</div>
+      <div class="lang-pill"><span class="flag">🇨🇳</span>中文</div>
+      <div class="lang-pill"><span class="flag">🇯🇵</span>日本語</div>
+    </div>
+  </div>
+
+  <!-- URL box -->
+  <div class="card">
+    <div class="card-title">Tu link directo</div>
+    <div class="url-box">
+      <div class="url-text">ideasmkt-translator-production.up.railway.app/client.html</div>
+      <button class="copy-btn" onclick="copyUrl()">Copiar</button>
+    </div>
+  </div>
+
+  <!-- Para Meet -->
+  <div class="card">
+    <div class="card-title">Cómo usarlo con Google Meet</div>
+    <div class="steps">
+      <div class="step" style="padding:0.7rem 0.9rem;">
+        <div class="step-num" style="width:24px;height:24px;font-size:0.65rem;">1</div>
+        <div class="step-body">
+          <div class="step-desc">Entra a tu reunión de Google Meet normalmente</div>
+        </div>
+      </div>
+      <div class="step" style="padding:0.7rem 0.9rem;">
+        <div class="step-num" style="width:24px;height:24px;font-size:0.65rem;">2</div>
+        <div class="step-body">
+          <div class="step-desc">En tu teléfono (o en otra pestaña) abre el traductor</div>
+        </div>
+      </div>
+      <div class="step" style="padding:0.7rem 0.9rem;">
+        <div class="step-num" style="width:24px;height:24px;font-size:0.65rem;">3</div>
+        <div class="step-body">
+          <div class="step-desc">Selecciona tu idioma, toca Conectar y listo — subtítulos en tiempo real</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div>
+    <div class="steps-title" style="margin-bottom:0.75rem;">Preguntas frecuentes</div>
+    <div class="faq">
+      <div class="faq-item">
+        <div class="faq-q">¿Necesito instalar algo?</div>
+        <div class="faq-a">No. Solo abre el link en Chrome. No hay apps, no hay registro, no hay instalaciones.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Funciona en mi teléfono?</div>
+        <div class="faq-a">Sí, está optimizado para iOS y Android. Funciona mejor en Chrome.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Cuántas personas pueden conectarse?</div>
+        <div class="faq-a">Múltiples asistentes pueden conectarse al mismo tiempo, cada uno en su idioma.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Funciona con Zoom, Teams o Meet?</div>
+        <div class="faq-a">Sí. El traductor corre en paralelo con cualquier plataforma de videollamadas.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="footer">Ideas MKT · Live Translator · Powered by Azure AI</div>
+</div>
+
+<script>
+  function copyUrl() {
+    const url = 'https://ideasmkt-translator-production.up.railway.app/client.html';
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => btn.textContent = 'Copiar', 2000);
+    });
+  }
+</script>
+</body>
+</html>
+
