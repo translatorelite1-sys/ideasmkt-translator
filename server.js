@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "client.html"));
 });
 
-// Servidor HTTP
+// Servidor HTTP (IMPORTANTE: SIN PUERTO FIJO)
 const PORT = process.env.PORT;
 
 const server = app.listen(PORT, () => {
