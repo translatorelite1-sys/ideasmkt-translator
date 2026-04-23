@@ -17,8 +17,10 @@ app.get("/", (req, res) => {
 });
 
 // Servidor HTTP
-const server = app.listen(process.env.PORT || 3000, () => {
-  console.log("Servidor HTTP iniciado");
+const PORT = process.env.PORT;
+
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
 // Servidor WebSocket
