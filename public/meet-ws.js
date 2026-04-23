@@ -1,152 +1,140 @@
 /**
- * Ideas MKT Live Translator — meet-ws.js
- * Módulo 1: Captura audio de Google Meet y lo envía al backend por WebSocket.
- * Incluir en admin.html: <script src="meet-ws.js"></script>
+ * ============================================================
+ *  Ideas MKT Live Translator — meet-ws.js
+ *  Conexión WebSocket para admin y asistentes
+ * ============================================================
  */
 
-const MEET_WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') +
-  '://' + location.host;
+let ws = null;
+let reconnectTimer = null;
 
-let meetStream   = null;
-let audioContext = null;
-let mediaSource  = null;
-let processor    = null;
-let meetWs       = null;
-let isMeetActive = false;
+// Detectar URL automáticamente según hosting
+const WS_URL =
+  (location.protocol === "https:" ? "wss://" : "ws://") +
+  location.host;
 
-// ── UI Button ────────────────────────────────────────────────────────────────
+// ------------------------------------------------------------
+//  Conectar WebSocket
+// ------------------------------------------------------------
+function connectBackend() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
 
-function initMeetWSButton() {
-  const btn = document.getElementById('btnModoMeetWS');
-  if (!btn) return;
+  console.log("[WS] Conectando a:", WS_URL);
+  ws = new WebSocket(WS_URL);
 
-  btn.addEventListener('click', () => {
-    isMeetActive ? stopMeetModeWS() : startMeetModeWS();
+  ws.onopen = () => {
+    console.log("[WS] Conectado");
+    updateSidebarStatus(true);
+
+    // Registrar admin
+    ws.send(JSON.stringify({ type: "admin" }));
+  };
+
+  ws.onclose = () => {
+    console.log("[WS] Desconectado");
+    updateSidebarStatus(false);
+
+    // Reintentar cada 3s
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connectBackend, 3000);
+  };
+
+  ws.onerror = (err) => {
+    console.error("[WS] Error:", err);
+  };
+
+  ws.onmessage = (msg) => {
+    const data = JSON.parse(msg.data);
+
+    if (data.type === "clients_update") {
+      updateClientsTable(data.clients);
+    }
+
+    if (data.type === "original") {
+      updateLastOriginal(data.text);
+    }
+
+    if (data.type === "translations") {
+      updateLastTranslation(data.translations);
+    }
+
+    if (data.type === "audio") {
+      playAudioForLang(data.lang, data.audio);
+    }
+  };
+}
+
+// ------------------------------------------------------------
+//  Enviar audio desde navegador (si se usa micrófono)
+// ------------------------------------------------------------
+function sendAudioChunk(base64Audio) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+  ws.send(
+    JSON.stringify({
+      type: "audio_chunk",
+      audio: base64Audio,
+    })
+  );
+}
+
+// ------------------------------------------------------------
+//  Helpers UI
+// ------------------------------------------------------------
+function updateSidebarStatus(isOnline) {
+  const el = document.getElementById("sidebarStatus");
+  if (!el) return;
+
+  if (isOnline) {
+    el.classList.add("live");
+    el.innerHTML = `<span class="dot"></span> Backend conectado`;
+  } else {
+    el.classList.remove("live");
+    el.innerHTML = `<span class="dot"></span> Backend desconectado`;
+  }
+}
+
+function updateClientsTable(clients) {
+  const tbody = document.getElementById("clientsTable");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  clients.forEach((c, i) => {
+    const row = `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${c.role}</td>
+        <td>${c.language}</td>
+        <td>${c.connectedAt}</td>
+        <td>${c.messages}</td>
+      </tr>
+    `;
+    tbody.innerHTML += row;
   });
 }
 
-// ── Start ────────────────────────────────────────────────────────────────────
-
-async function startMeetModeWS() {
-  if (meetWs && meetWs.readyState === WebSocket.OPEN) return;
-
-  setMeetStatus('Conectando...');
-
-  meetWs = new WebSocket(MEET_WS_URL);
-
-  meetWs.binaryType = 'arraybuffer';
-
-  meetWs.onopen = async () => {
-    try {
-      // Registrar como fuente de audio (no como asistente)
-      meetWs.send(JSON.stringify({ type: 'meet_source', role: 'audio_input' }));
-
-      // Solicitar captura de pestaña con audio
-      meetStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 16000,
-        }
-      });
-
-      audioContext = new AudioContext({ sampleRate: 16000 });
-      mediaSource  = audioContext.createMediaStreamSource(meetStream);
-      processor    = audioContext.createScriptProcessor(4096, 1, 1);
-
-      mediaSource.connect(processor);
-      processor.connect(audioContext.destination);
-
-      processor.onaudioprocess = (e) => {
-        if (meetWs && meetWs.readyState === WebSocket.OPEN) {
-          const input  = e.inputBuffer.getChannelData(0);
-          const pcm16  = floatTo16BitPCM(input);
-          meetWs.send(pcm16);
-        }
-      };
-
-      // Handle stream stop (user closes share)
-      meetStream.getAudioTracks()[0].onended = stopMeetModeWS;
-
-      isMeetActive = true;
-      setMeetStatus('● Capturando audio de Meet');
-      updateMeetBtn(true);
-
-    } catch (err) {
-      setMeetStatus('Error: ' + (err.message || 'No se pudo capturar'));
-      stopMeetModeWS();
-    }
-  };
-
-  meetWs.onclose = () => {
-    if (isMeetActive) {
-      setMeetStatus('Reconectando...');
-      setTimeout(startMeetModeWS, 3000);
-    }
-  };
-
-  meetWs.onerror = () => {
-    setMeetStatus('Error de WebSocket');
-    stopMeetModeWS();
-  };
+function updateLastOriginal(text) {
+  const el = document.getElementById("lastOriginal");
+  if (el) el.innerText = text;
 }
 
-// ── Stop ─────────────────────────────────────────────────────────────────────
+function updateLastTranslation(translations) {
+  const el = document.getElementById("lastTranslation");
+  if (!el) return;
 
-function stopMeetModeWS() {
-  isMeetActive = false;
-
-  if (processor)    { processor.disconnect();   processor    = null; }
-  if (mediaSource)  { mediaSource.disconnect(); mediaSource  = null; }
-  if (audioContext) { audioContext.close();      audioContext = null; }
-  if (meetStream)   {
-    meetStream.getTracks().forEach(t => t.stop());
-    meetStream = null;
-  }
-  if (meetWs && meetWs.readyState === WebSocket.OPEN) {
-    meetWs.close();
-  }
-  meetWs = null;
-
-  setMeetStatus('Detenido');
-  updateMeetBtn(false);
+  el.innerHTML = translations
+    .map((t) => `<div><b>[${t.lang}]</b> ${t.text}</div>`)
+    .join("");
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function floatTo16BitPCM(float32Array) {
-  const buffer = new ArrayBuffer(float32Array.length * 2);
-  const view   = new DataView(buffer);
-  for (let i = 0; i < float32Array.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32Array[i]));
-    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-  return buffer;
+// ------------------------------------------------------------
+//  Reproducir audio TTS
+// ------------------------------------------------------------
+function playAudioForLang(lang, base64Audio) {
+  const audio = new Audio("data:audio/wav;base64," + base64Audio);
+  audio.play();
 }
 
-function setMeetStatus(text) {
-  const el = document.getElementById('meetWSStatus');
-  if (el) el.textContent = text;
-  console.log('[MeetWS]', text);
-}
-
-function updateMeetBtn(active) {
-  const btn = document.getElementById('btnModoMeetWS');
-  if (!btn) return;
-  if (active) {
-    btn.textContent = '⏹ Detener captura Meet';
-    btn.style.background = 'rgba(255,80,80,0.15)';
-    btn.style.borderColor = 'rgba(255,80,80,0.5)';
-    btn.style.color = '#ff7070';
-  } else {
-    btn.textContent = '▶ Activar modo Google Meet';
-    btn.style.background = '';
-    btn.style.borderColor = '';
-    btn.style.color = '';
-  }
-}
-
-// ── Auto-init ────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', initMeetWSButton);
-
+// Auto conectar
+setTimeout(connectBackend, 500);
